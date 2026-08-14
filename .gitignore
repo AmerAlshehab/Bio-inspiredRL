@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Training artifacts
+runs/
+wandb/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+logs/
+outputs/
+
+# Data
+data/
+*.npz
+*.hdf5
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
