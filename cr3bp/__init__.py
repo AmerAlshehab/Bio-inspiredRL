@@ -28,6 +28,7 @@ from .dynamics import (
     l3,
     propagate,
     pseudo_potential,
+    rk4_step,
 )
 from .variational import monodromy, propagate_stm, state_jacobian
 from .periodic import correct_lyapunov, floquet, linear_lyapunov_guess
@@ -39,6 +40,7 @@ __all__ = [
     "jacobi_constant",
     "pseudo_potential",
     "propagate",
+    "rk4_step",
     "l1",
     "l2",
     "l3",

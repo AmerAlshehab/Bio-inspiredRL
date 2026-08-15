@@ -83,6 +83,24 @@ def propagate(
     )
 
 
+def rk4_step(state: np.ndarray, dt: float, mu: float, n_substeps: int = 1) -> np.ndarray:
+    """Fixed-step RK4 over ``dt`` (split into ``n_substeps``).
+
+    This is the *training-loop* integrator: cheap and deterministic, unlike the
+    adaptive DOP853 in ``propagate`` which is reserved for verification. The flow
+    is autonomous, so the time argument is irrelevant.
+    """
+    s = np.asarray(state, dtype=float)
+    h = dt / n_substeps
+    for _ in range(n_substeps):
+        k1 = equations_of_motion(0.0, s, mu)
+        k2 = equations_of_motion(0.0, s + 0.5 * h * k1, mu)
+        k3 = equations_of_motion(0.0, s + 0.5 * h * k2, mu)
+        k4 = equations_of_motion(0.0, s + h * k3, mu)
+        s = s + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+    return s
+
+
 # --- Collinear Lagrange points (Newton on the on-axis force balance) ---------
 
 _NEWTON_TOL = 1.0e-15
