@@ -9,7 +9,9 @@ fixed-step RK4 for speed. Leaving the tube ends the episode with a penalty.
 
     observation : [ dr/scale (3), dv/scale (3), sin(2*pi*phase), cos(2*pi*phase) ]
     action      : dv in [-1, 1]^3, scaled to max_dv (impulsive, synodic frame)
-    reward      : -( w_dv |dv| + w_pos |dr| + w_vel |dv_err| ), minus exit penalty
+    reward      : alive_bonus - ( w_dv |dv| + w_pos |dr| + w_vel |dv_err| ),
+                  minus exit_penalty on tube exit (alive_bonus makes holding the
+                  orbit always beat exiting; dv is the objective to minimise)
 
 Wrap with a VecEnv (SB3 make_vec_env) for parallelism and, ideally, VecNormalize.
 """
@@ -45,9 +47,15 @@ class StationKeepingConfig:
     max_dv: float = 0.02              # per-maneuver impulse cap (canonical velocity)
     tube_radius: float = 0.02         # position error at which the episode fails
 
-    w_dv: float = 1.0                 # propellant weight
-    w_pos: float = 20.0               # position-tracking weight
-    w_vel: float = 2.0                # velocity-tracking weight
+    # Reward = alive_bonus - (w_dv|dv| + w_pos|dr| + w_vel|dv_err|), minus
+    # exit_penalty on tube exit. alive_bonus must exceed the worst per-step cost
+    # so that holding the orbit always beats dying -- otherwise the agent learns
+    # to exit early because the capped exit penalty is cheaper than accumulating
+    # tracking cost over the full horizon.
+    alive_bonus: float = 0.1          # per-step reward for staying in the tube
+    w_dv: float = 1.0                 # propellant weight (the objective)
+    w_pos: float = 5.0                # position-tracking weight (gentle centering)
+    w_vel: float = 0.5                # velocity-tracking weight
     exit_penalty: float = 100.0       # one-off penalty for leaving the tube
 
     init_pos_sigma: float = 1.0e-3    # injection dispersion (position)
@@ -158,6 +166,8 @@ class StationKeepingEnv(gym.Env):
         terminated = pos_err > self.cfg.tube_radius
         if terminated:
             reward -= self.cfg.exit_penalty
+        else:
+            reward += self.cfg.alive_bonus
         truncated = self.t_step >= self.max_steps
 
         info = {"pos_err": pos_err, "vel_err": vel_err,

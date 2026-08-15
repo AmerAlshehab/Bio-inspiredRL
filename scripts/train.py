@@ -28,7 +28,7 @@ from stable_baselines3 import SAC, TD3
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -90,14 +90,11 @@ def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
     cfg = cfg or StationKeepingConfig()
     reference = ReferenceOrbit(cfg)          # built once, shared by all copies
 
+    # No VecNormalize: the env already scales observations to O(1) (1/tube_radius)
+    # and rewards are O(0.1)/step, so normalisation is redundant -- and dropping
+    # it removes the eval-time obs-stats mismatch that otherwise corrupts rollouts.
     venv = make_vec_env(cfg, reference, n_envs, seed)
-    venv = VecNormalize(venv, norm_obs=True, norm_reward=True, clip_obs=10.0)
-
-    # Eval env uses the same normalisation stats but frozen (training=False).
     eval_env = make_vec_env(cfg, reference, 1, seed + 777)
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False,
-                            clip_obs=10.0, training=False)
-    eval_env.obs_rms = venv.obs_rms           # share the running obs stats
 
     out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                            "runs", run_name)
@@ -108,15 +105,19 @@ def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
 
     model = build_model(algo, venv, seed)
     model.learn(total_timesteps=timesteps, callback=eval_cb, progress_bar=progress_bar)
-
     model.save(os.path.join(out_dir, "final_model"))
-    venv.save(os.path.join(out_dir, "vecnormalize.pkl"))
 
-    metrics = rollout_metrics(model, StationKeepingEnv(cfg, reference=reference))
+    # SAC/TD3 can drift past their peak; EvalCallback saved the best checkpoint,
+    # so report that. Fall back to the final model if eval never ran (tiny runs).
+    best_path = os.path.join(out_dir, "best_model.zip")
+    eval_model = (ALGOS[algo].load(best_path[:-4], device="cpu")
+                  if os.path.exists(best_path) else model)
+
+    metrics = rollout_metrics(eval_model, StationKeepingEnv(cfg, reference=reference))
     print(f"\n[{run_name}] retention={metrics['retention']:.2f}  "
           f"dV/rev={metrics['dv_per_rev']:.3e} +/- {metrics['dv_per_rev_std']:.1e}  "
           f"ep_reward={metrics['ep_reward']:.1f}")
-    return model, metrics, out_dir
+    return eval_model, metrics, out_dir
 
 
 def main():
