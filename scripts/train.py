@@ -85,7 +85,8 @@ def rollout_metrics(model, env, n_episodes=20):
     }
 
 
-def train(algo, timesteps, n_envs, seed, run_name, cfg=None):
+def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
+          progress_bar=True, eval_verbose=1):
     cfg = cfg or StationKeepingConfig()
     reference = ReferenceOrbit(cfg)          # built once, shared by all copies
 
@@ -103,10 +104,10 @@ def train(algo, timesteps, n_envs, seed, run_name, cfg=None):
     os.makedirs(out_dir, exist_ok=True)
     eval_cb = EvalCallback(eval_env, best_model_save_path=out_dir,
                            eval_freq=max(5_000 // n_envs, 1), n_eval_episodes=10,
-                           deterministic=True, verbose=1)
+                           deterministic=True, verbose=eval_verbose)
 
     model = build_model(algo, venv, seed)
-    model.learn(total_timesteps=timesteps, callback=eval_cb, progress_bar=True)
+    model.learn(total_timesteps=timesteps, callback=eval_cb, progress_bar=progress_bar)
 
     model.save(os.path.join(out_dir, "final_model"))
     venv.save(os.path.join(out_dir, "vecnormalize.pkl"))
