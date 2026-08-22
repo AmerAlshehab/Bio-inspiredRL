@@ -48,13 +48,16 @@ def make_vec_env(cfg, reference, n_envs, seed):
     return DummyVecEnv([factory(i) for i in range(n_envs)])
 
 
-def build_model(algo, venv, seed):
+def build_model(algo, venv, seed, target_entropy="auto"):
     common = dict(policy="MlpPolicy", env=venv, seed=seed, verbose=0,
                   learning_rate=3e-4, buffer_size=1_000_000, batch_size=256,
                   gamma=0.99, tau=0.005, learning_starts=10_000)
     if algo == "sac":
-        # ent_coef="auto" tunes the temperature to a target entropy for us.
-        return SAC(**common, train_freq=1, ent_coef="auto")
+        # ent_coef="auto" tunes the temperature toward target_entropy. "auto"
+        # means -dim(A) = -3; a more negative value (e.g. -3.5) makes the policy
+        # slightly more deterministic. Under test as an isolation knob.
+        return SAC(**common, train_freq=1, ent_coef="auto",
+                   target_entropy=target_entropy)
     # TD3 is deterministic, so exploration comes from injected action noise.
     n_act = venv.action_space.shape[0]
     noise = NormalActionNoise(np.zeros(n_act), 0.1 * np.ones(n_act))
@@ -86,7 +89,7 @@ def rollout_metrics(model, env, n_episodes=20):
 
 
 def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
-          progress_bar=True, eval_verbose=1):
+          progress_bar=True, eval_verbose=1, target_entropy="auto"):
     cfg = cfg or StationKeepingConfig()
     reference = ReferenceOrbit(cfg)          # built once, shared by all copies
 
@@ -103,7 +106,7 @@ def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
                            eval_freq=max(5_000 // n_envs, 1), n_eval_episodes=10,
                            deterministic=True, verbose=eval_verbose)
 
-    model = build_model(algo, venv, seed)
+    model = build_model(algo, venv, seed, target_entropy=target_entropy)
     model.learn(total_timesteps=timesteps, callback=eval_cb, progress_bar=progress_bar)
     model.save(os.path.join(out_dir, "final_model"))
 

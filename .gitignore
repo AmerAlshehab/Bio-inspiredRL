@@ -16,6 +16,12 @@ checkpoints/
 logs/
 outputs/
 
+# Benchmark scratch: captured stdout, and the transient default output that
+# every run overwrites (named snapshots are committed instead).
+results/*.log
+results/benchmark.json
+results/benchmark.md
+
 # Data
 data/
 *.npz

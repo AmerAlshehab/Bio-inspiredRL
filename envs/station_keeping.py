@@ -53,7 +53,7 @@ class StationKeepingConfig:
     # to exit early because the capped exit penalty is cheaper than accumulating
     # tracking cost over the full horizon.
     alive_bonus: float = 0.1          # per-step reward for staying in the tube
-    w_dv: float = 1.0                 # propellant weight (the objective)
+    w_dv: float = 10.0                # propellant weight (the objective)
     w_pos: float = 5.0                # position-tracking weight (gentle centering)
     w_vel: float = 0.5                # velocity-tracking weight
     exit_penalty: float = 100.0       # one-off penalty for leaving the tube
