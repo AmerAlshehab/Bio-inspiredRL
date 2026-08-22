@@ -1,3 +1,6 @@
+# Planning notes -- kept locally, never committed
+docs/
+
 # Python
 __pycache__/
 *.py[cod]
