@@ -98,9 +98,13 @@ class StationKeepingEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(self, config: StationKeepingConfig | None = None,
-                 reference: ReferenceOrbit | None = None):
+                 reference: ReferenceOrbit | None = None,
+                 truth: bool = False):
         super().__init__()
         self.cfg = config or StationKeepingConfig()
+        # truth=True integrates each control interval with DOP853 instead of RK4 --
+        # used only to VERIFY a policy on high-accuracy dynamics after training.
+        self.truth = truth
         # Reference orbit is expensive to build; share one across vectorised copies.
         self.ref = reference or ReferenceOrbit(self.cfg)
 
@@ -148,9 +152,13 @@ class StationKeepingEnv(gym.Env):
         dv_cost = float(np.linalg.norm(dv))
         self.cum_dv += dv_cost
 
-        self.state = rk4_step(
-            self.state, self.dt_control, self.cfg.mu, self.cfg.substeps_per_control
-        )
+        if self.truth:
+            sol = propagate(self.state, (0.0, self.dt_control), self.cfg.mu)
+            self.state = sol.y[:, -1].copy()
+        else:
+            self.state = rk4_step(
+                self.state, self.dt_control, self.cfg.mu, self.cfg.substeps_per_control
+            )
         self.phase = (self.phase + self.dt_control / self.ref.period) % 1.0
         self.t_step += 1
 

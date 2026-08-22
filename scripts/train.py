@@ -48,7 +48,7 @@ def make_vec_env(cfg, reference, n_envs, seed):
     return DummyVecEnv([factory(i) for i in range(n_envs)])
 
 
-def build_model(algo, venv, seed, target_entropy="auto"):
+def build_model(algo, venv, seed, target_entropy="auto", noise_sigma=0.1):
     common = dict(policy="MlpPolicy", env=venv, seed=seed, verbose=0,
                   learning_rate=3e-4, buffer_size=1_000_000, batch_size=256,
                   gamma=0.99, tau=0.005, learning_starts=10_000)
@@ -58,38 +58,48 @@ def build_model(algo, venv, seed, target_entropy="auto"):
         # slightly more deterministic. Under test as an isolation knob.
         return SAC(**common, train_freq=1, ent_coef="auto",
                    target_entropy=target_entropy)
-    # TD3 is deterministic, so exploration comes from injected action noise.
+    # TD3 is deterministic, so exploration comes from injected action noise;
+    # noise_sigma is swept to give TD3 a fair shake against SAC's auto-tuned entropy.
     n_act = venv.action_space.shape[0]
-    noise = NormalActionNoise(np.zeros(n_act), 0.1 * np.ones(n_act))
+    noise = NormalActionNoise(np.zeros(n_act), noise_sigma * np.ones(n_act))
     return TD3(**common, action_noise=noise, policy_delay=2)
 
 
-def rollout_metrics(model, env, n_episodes=20):
-    """Deterministic eval: tube-retention rate and dV per revolution (canonical)."""
+def rollout_metrics(model, env, n_episodes=50):
+    """Deterministic eval over independent dispersion draws. Returns tube retention
+    (with survivor count for a pooled CI), and dV/rev + absolute total dV so the
+    fuel metric is reported separately from survival (never a ratio that a policy
+    could game by exiting early)."""
     ppr = env.cfg.points_per_rev
-    retained, dv_per_rev, ep_reward = [], [], []
+    survived, dv_per_rev, dv_total, ep_reward = [], [], [], []
     for ep in range(n_episodes):
         obs, _ = env.reset(seed=10_000 + ep)
-        done, r_sum, info = False, 0.0, {}
+        done, r_sum, info, terminated = False, 0.0, {}, False
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, r, terminated, truncated, info = env.step(action)
             r_sum += r
             done = terminated or truncated
-        retained.append(not terminated)          # survived the full horizon
+        survived.append(not terminated)          # survived the full horizon
         revs = env.t_step / ppr
         dv_per_rev.append(info["cum_dv"] / max(revs, 1e-9))
+        dv_total.append(info["cum_dv"])
         ep_reward.append(r_sum)
+    dv = np.asarray(dv_per_rev)
     return {
-        "retention": float(np.mean(retained)),
-        "dv_per_rev": float(np.mean(dv_per_rev)),
-        "dv_per_rev_std": float(np.std(dv_per_rev)),
+        "retention": float(np.mean(survived)),
+        "n_episodes": int(n_episodes),
+        "n_survived": int(np.sum(survived)),
+        "dv_per_rev": float(dv.mean()),
+        "dv_per_rev_median": float(np.median(dv)),
+        "dv_per_rev_std": float(dv.std()),
+        "dv_total": float(np.mean(dv_total)),
         "ep_reward": float(np.mean(ep_reward)),
     }
 
 
 def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
-          progress_bar=True, eval_verbose=1, target_entropy="auto"):
+          progress_bar=True, eval_verbose=1, target_entropy="auto", noise_sigma=0.1):
     cfg = cfg or StationKeepingConfig()
     reference = ReferenceOrbit(cfg)          # built once, shared by all copies
 
@@ -106,7 +116,8 @@ def train(algo, timesteps, n_envs, seed, run_name, cfg=None,
                            eval_freq=max(5_000 // n_envs, 1), n_eval_episodes=10,
                            deterministic=True, verbose=eval_verbose)
 
-    model = build_model(algo, venv, seed, target_entropy=target_entropy)
+    model = build_model(algo, venv, seed, target_entropy=target_entropy,
+                        noise_sigma=noise_sigma)
     model.learn(total_timesteps=timesteps, callback=eval_cb, progress_bar=progress_bar)
     model.save(os.path.join(out_dir, "final_model"))
 

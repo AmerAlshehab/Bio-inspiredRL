@@ -18,6 +18,7 @@ import os
 import sys
 
 import numpy as np
+from scipy.stats import binomtest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -31,34 +32,48 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def aggregate(runs):
-    """Group per-run metrics by algo into mean/std across seeds."""
+    """Group per-run metrics by algo across seeds. Reports median + IQR (robust to
+    the fat-tailed seed variance mean+std hides) alongside the per-seed scatter, and
+    a pooled Clopper-Pearson retention CI (mean±std of a std>mean distribution is
+    meaningless, and 20/20 episodes cannot support a '100% retention' claim)."""
     out = {}
     for algo in sorted({r["algo"] for r in runs}):
         rows = [r for r in runs if r["algo"] == algo]
-        ret = np.array([r["retention"] for r in rows])
-        dv = np.array([r["dv_per_rev"] for r in rows])
+        dv = np.array([r["dv_per_rev"] for r in rows])       # one per seed
+        q1, q3 = np.percentile(dv, [25, 75])
+        surv = sum(r["n_survived"] for r in rows)            # pooled across seeds
+        n_eps = sum(r["n_episodes"] for r in rows)
+        ci = binomtest(surv, n_eps).proportion_ci(0.95, method="exact")
         out[algo] = {
             "n_seeds": len(rows),
-            "retention_mean": float(ret.mean()),
-            "retention_std": float(ret.std()),
             "dv_per_rev_mean": float(dv.mean()),
+            "dv_per_rev_median": float(np.median(dv)),
             "dv_per_rev_std": float(dv.std()),
+            "dv_per_rev_iqr": [float(q1), float(q3)],
+            "dv_per_rev_seeds": [float(x) for x in dv],      # scatter, not a summary
+            "dv_per_rev_median_ms": float(np.median(dv) * EM_V_STAR_MS),
             "dv_per_rev_mean_ms": float(dv.mean() * EM_V_STAR_MS),
+            "dv_total_median": float(np.median([r["dv_total"] for r in rows])),
+            "retention_pooled": surv / n_eps,
+            "retention_ci95": [float(ci.low), float(ci.high)],
+            "retention_n": n_eps,
         }
     return out
 
 
 def markdown_table(summary):
     lines = [
-        "| algo | seeds | retention | dV/rev (canonical) | dV/rev (m/s) |",
-        "|------|-------|-----------|--------------------|--------------|",
+        "| algo | seeds | retention (pooled, 95% CI) | dV/rev median [IQR] m/s | dV/rev mean+/-std m/s |",
+        "|------|-------|----------------------------|-------------------------|----------------------|",
     ]
     for algo, s in summary.items():
+        lo, hi = s["retention_ci95"]
+        q1, q3 = (v * EM_V_STAR_MS for v in s["dv_per_rev_iqr"])
         lines.append(
             f"| {algo.upper()} | {s['n_seeds']} "
-            f"| {s['retention_mean']:.2f} +/- {s['retention_std']:.2f} "
-            f"| {s['dv_per_rev_mean']:.3e} +/- {s['dv_per_rev_std']:.1e} "
-            f"| {s['dv_per_rev_mean_ms']:.2f} |"
+            f"| {s['retention_pooled']:.3f} [{lo:.3f}, {hi:.3f}] (n={s['retention_n']}) "
+            f"| {s['dv_per_rev_median_ms']:.1f} [{q1:.1f}, {q3:.1f}] "
+            f"| {s['dv_per_rev_mean_ms']:.1f} +/- {s['dv_per_rev_std'] * EM_V_STAR_MS:.1f} |"
         )
     return "\n".join(lines)
 
