@@ -28,8 +28,10 @@ from gymnasium import spaces
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cr3bp.dynamics import MU_EARTH_MOON, l1, rk4_step  # noqa: E402
+from cr3bp.dynamics import MU_EARTH_MOON, l1, l2, l3, rk4_step  # noqa: E402
 from cr3bp.periodic import correct_lyapunov, linear_lyapunov_guess, floquet  # noqa: E402
+
+_LIBRATION = {"L1": l1, "L2": l2, "L3": l3}
 from cr3bp.variational import monodromy  # noqa: E402
 from cr3bp.dynamics import propagate  # noqa: E402
 
@@ -39,6 +41,7 @@ class StationKeepingConfig:
     """All knobs in one place -- vary fields for the sensitivity sweep."""
 
     mu: float = MU_EARTH_MOON
+    libration_point: str = "L1"       # collinear point the orbit encircles: L1/L2/L3
     amplitude: float = 0.005          # Lyapunov x-amplitude (canonical length units)
     points_per_rev: int = 40          # control decisions per revolution
     substeps_per_control: int = 10    # RK4 substeps per control interval
@@ -70,7 +73,7 @@ class ReferenceOrbit:
     """A closed Lyapunov orbit sampled on a uniform phase grid for fast lookup."""
 
     def __init__(self, cfg: StationKeepingConfig):
-        x_lp = l1(cfg.mu)
+        x_lp = _LIBRATION[cfg.libration_point](cfg.mu)
         seed = linear_lyapunov_guess(cfg.mu, x_lp, cfg.amplitude)
         self.state0, self.period, self.info = correct_lyapunov(seed[0], seed[4], cfg.mu)
         self.mu = cfg.mu

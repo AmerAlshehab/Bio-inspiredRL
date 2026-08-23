@@ -53,10 +53,11 @@ def sac_models(pattern="sac_wdv10_*"):
     return [SAC.load(p[:-4], device="cpu") for p in paths], paths
 
 
-def build_reference(amp):
-    """Reference orbit at a given amplitude, or None if the corrector cannot
-    close it (past the single-shooting envelope)."""
-    cfg = dataclasses.replace(StationKeepingConfig(), amplitude=amp)
+def build_reference(amp, libration="L1"):
+    """Reference orbit at a given amplitude and libration point, or None if the
+    corrector cannot close it (past the single-shooting envelope)."""
+    cfg = dataclasses.replace(StationKeepingConfig(), amplitude=amp,
+                              libration_point=libration)
     try:
         return cfg, ReferenceOrbit(cfg)
     except RuntimeError:
@@ -73,12 +74,13 @@ def eval_sac_pooled(models, env, n_episodes):
     return (np.concatenate(dvr), np.concatenate(tot), np.concatenate(surv))
 
 
-def sweep(amps, n_sac, n_lqr):
+def sweep(amps, n_sac, n_lqr, libration="L1"):
     models, paths = sac_models()
-    print(f"loaded {len(models)} SAC seeds; LQR rho={LQR_RHO}", flush=True)
+    print(f"loaded {len(models)} SAC seeds (trained on L1); "
+          f"evaluating on {libration}; LQR rho={LQR_RHO}", flush=True)
     rows = []
     for amp in amps:
-        cfg, ref = build_reference(amp)
+        cfg, ref = build_reference(amp, libration)
         if ref is None:
             print(f"amp={amp:.4f}: corrector did not converge -- envelope edge", flush=True)
             rows.append({"amplitude": amp, "reference": None})
@@ -101,16 +103,17 @@ def sweep(amps, n_sac, n_lqr):
               flush=True)
     return {"n_sac_seeds": len(models), "n_sac_episodes": n_sac,
             "n_lqr_episodes": n_lqr, "lqr_rho": LQR_RHO, "train_amplitude": TRAIN_AMP,
-            "rows": rows}
+            "libration_point": libration, "rows": rows}
 
 
 def write_markdown(res):
-    lines = ["# Generalisation across the Lyapunov orbit family\n",
-             f"One SAC policy trained at amplitude {TRAIN_AMP} (pooled over "
-             f"{res['n_sac_seeds']} seeds), evaluated **zero-shot** across amplitudes; "
-             f"the LQR gain schedule is re-derived at each amplitude (rho={LQR_RHO}). "
-             f"SAC over {res['n_sac_episodes']} eps/seed, LQR over "
-             f"{res['n_lqr_episodes']} eps.\n",
+    lib = res.get("libration_point", "L1")
+    lines = [f"# Generalisation across the {lib} Lyapunov orbit family\n",
+             f"One SAC policy trained at amplitude {TRAIN_AMP} on an **L1** orbit "
+             f"(pooled over {res['n_sac_seeds']} seeds), evaluated **zero-shot** on "
+             f"**{lib}** orbits across amplitudes; the LQR gain schedule is re-derived "
+             f"at each amplitude (rho={LQR_RHO}). SAC over {res['n_sac_episodes']} "
+             f"eps/seed, LQR over {res['n_lqr_episodes']} eps.\n",
              "| amp | ~km | T (TU) | rho_u | SAC dV/rev [IQR] | SAC ret. | "
              "LQR dV/rev [IQR] | LQR ret. |",
              "|---|---|---|---|---|---|---|---|"]
@@ -147,7 +150,9 @@ def make_figure(res, path):
     sac_ret = [r["sac"]["retention_pooled"] for r in live]
     lqr_ret = [r["lqr"]["retention_pooled"] for r in live]
 
+    lib = res.get("libration_point", "L1")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
+    fig.suptitle(f"SAC trained on L1, evaluated zero-shot on {lib}", fontsize=11)
     ax1.plot(amp, sac_dv, "o-", label="SAC (one policy, zero-shot)", color="C0")
     ax1.plot(amp, lqr_dv, "s--", label="LQR (re-derived per orbit)", color="C1")
     ax1.axvline(TRAIN_AMP, color="grey", ls=":", lw=1, label="SAC training orbit")
@@ -165,25 +170,71 @@ def make_figure(res, path):
     print(f"wrote {path}")
 
 
+def combined_figure(path):
+    """Overlay both libration families on one figure -- the report headline: one
+    L1-trained policy holding L1 and L2 orbits, against per-orbit LQR."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("matplotlib not available -- skipping combined figure")
+        return
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
+    fig.suptitle("One L1-trained SAC policy, zero-shot across families", fontsize=11)
+    for tag, style in [("", "-"), ("_L2", "--")]:
+        f = os.path.join(ROOT, "results", f"benchmark_generalization{tag}.json")
+        if not os.path.exists(f):
+            continue
+        with open(f) as fh:
+            res = json.load(fh)
+        lib = res.get("libration_point", "L1")
+        live = [r for r in res["rows"] if "sac" in r]
+        amp = [r["amplitude"] for r in live]
+        ax1.plot(amp, [r["sac"]["dv_per_rev_median_ms"] for r in live], "o" + style,
+                 color="C0", label=f"SAC zero-shot ({lib})")
+        ax1.plot(amp, [r["lqr"]["dv_per_rev_median_ms"] for r in live], "s" + style,
+                 color="C1", label=f"LQR per-orbit ({lib})")
+        ax2.plot(amp, [r["sac"]["retention_pooled"] for r in live], "o" + style,
+                 color="C0", label=f"SAC ({lib})")
+        ax2.plot(amp, [r["lqr"]["retention_pooled"] for r in live], "s" + style,
+                 color="C1", label=f"LQR ({lib})")
+    ax1.set_xlabel("Lyapunov amplitude (canonical)"); ax1.set_ylabel("dV per rev (m/s)")
+    ax1.set_yscale("log"); ax1.legend(fontsize=8); ax1.set_title("Fuel cost")
+    ax2.set_xlabel("Lyapunov amplitude (canonical)"); ax2.set_ylabel("tube retention")
+    ax2.set_ylim(-0.05, 1.05); ax2.legend(fontsize=8); ax2.set_title("Survival")
+    fig.tight_layout(); fig.savefig(path, dpi=140)
+    print(f"wrote {path}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--amps", nargs="+", type=float, default=DEFAULT_AMPS)
     p.add_argument("--n-sac", type=int, default=100, help="eval episodes per SAC seed")
     p.add_argument("--n-lqr", type=int, default=200)
+    p.add_argument("--libration", default="L1", choices=["L1", "L2", "L3"],
+                   help="libration point of the ORBITS TO EVALUATE (policy is always L1-trained)")
     p.add_argument("--demo", action="store_true")
+    p.add_argument("--combined", action="store_true",
+                   help="only redraw the L1+L2 overlay from existing result JSONs")
     args = p.parse_args()
 
     if args.demo:
         _demo()
         return
+    if args.combined:
+        combined_figure(os.path.join(ROOT, "results", "generalization_combined.png"))
+        return
 
-    res = sweep(args.amps, args.n_sac, args.n_lqr)
-    with open(os.path.join(ROOT, "results", "benchmark_generalization.json"), "w") as f:
+    res = sweep(args.amps, args.n_sac, args.n_lqr, args.libration)
+    # L1 keeps the base filename; other points get suffixed so runs don't clobber.
+    suffix = "" if args.libration == "L1" else f"_{args.libration}"
+    with open(os.path.join(ROOT, "results", f"benchmark_generalization{suffix}.json"), "w") as f:
         json.dump(res, f, indent=2)
-    with open(os.path.join(ROOT, "results", "benchmark_generalization.md"), "w") as f:
+    with open(os.path.join(ROOT, "results", f"benchmark_generalization{suffix}.md"), "w") as f:
         f.write(write_markdown(res))
-    make_figure(res, os.path.join(ROOT, "results", "generalization.png"))
-    print("\nwrote results/benchmark_generalization.{json,md}")
+    make_figure(res, os.path.join(ROOT, "results", f"generalization{suffix}.png"))
+    print(f"\nwrote results/benchmark_generalization{suffix}.{{json,md}}")
     print("GENERALIZATION DONE")
 
 
