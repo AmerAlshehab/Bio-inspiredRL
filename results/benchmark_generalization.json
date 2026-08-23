@@ -1,0 +1,353 @@
+{
+  "n_sac_seeds": 8,
+  "n_sac_episodes": 50,
+  "n_lqr_episodes": 200,
+  "lqr_rho": 3.0,
+  "train_amplitude": 0.005,
+  "rows": [
+    {
+      "amplitude": 0.0005,
+      "period": 2.691631692692815,
+      "rho_unstable": 2675.072266183219,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 35.7336617107108,
+        "dv_per_rev_mean_ms": 35.72750865637055,
+        "dv_per_rev_iqr_ms": [
+          31.60424785998239,
+          39.439519568466814
+        ],
+        "dv_per_rev_std_ms": 9.682554201807106,
+        "dv_total_median": 1.0463736957748404,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.2618212015733261,
+        "dv_per_rev_mean_ms": 0.2767236306820465,
+        "dv_per_rev_iqr_ms": [
+          0.19241677800605453,
+          0.3332916925282804
+        ],
+        "dv_per_rev_std_ms": 0.12244548796987642,
+        "dv_total_median": 0.007666799460419506,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.001,
+      "period": 2.6917900928216687,
+      "rho_unstable": 2674.0152717741794,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 35.772993907246224,
+        "dv_per_rev_mean_ms": 35.746276205776624,
+        "dv_per_rev_iqr_ms": [
+          31.67744092957245,
+          39.4730639494968
+        ],
+        "dv_per_rev_std_ms": 9.693592642735565,
+        "dv_total_median": 1.0475254438432278,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.26143508162443035,
+        "dv_per_rev_mean_ms": 0.2767102635113918,
+        "dv_per_rev_iqr_ms": [
+          0.19280119815153965,
+          0.33312181961902193
+        ],
+        "dv_per_rev_std_ms": 0.12249759501095273,
+        "dv_total_median": 0.007655492873336174,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.002,
+      "period": 2.6924380802944388,
+      "rho_unstable": 2669.6974388846725,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 35.84730102224938,
+        "dv_per_rev_mean_ms": 35.787793329690444,
+        "dv_per_rev_iqr_ms": [
+          31.840376909733113,
+          39.5874471636536
+        ],
+        "dv_per_rev_std_ms": 9.715063634803771,
+        "dv_total_median": 1.0497013476500552,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.26065653576855174,
+        "dv_per_rev_mean_ms": 0.27665341508334096,
+        "dv_per_rev_iqr_ms": [
+          0.1920838289645173,
+          0.3327127935680393
+        ],
+        "dv_per_rev_std_ms": 0.12259375178188774,
+        "dv_total_median": 0.007632695044467107,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.003,
+      "period": 2.6935499686927096,
+      "rho_unstable": 2662.3113849840447,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 35.91555465550896,
+        "dv_per_rev_mean_ms": 35.83497002936297,
+        "dv_per_rev_iqr_ms": [
+          32.0257521042006,
+          39.824556793754624
+        ],
+        "dv_per_rev_std_ms": 9.735510317892969,
+        "dv_total_median": 1.0516999899124149,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.26085139022980686,
+        "dv_per_rev_mean_ms": 0.2765561573441375,
+        "dv_per_rev_iqr_ms": [
+          0.19151793303044234,
+          0.33260768734000207
+        ],
+        "dv_per_rev_std_ms": 0.12267891692221933,
+        "dv_total_median": 0.007638400885206642,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.005,
+      "period": 2.697285507368786,
+      "rho_unstable": 2637.707734993948,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 36.04800846294586,
+        "dv_per_rev_mean_ms": 35.948161244033685,
+        "dv_per_rev_iqr_ms": [
+          32.39282671630251,
+          39.64812406013509
+        ],
+        "dv_per_rev_std_ms": 9.771866052710163,
+        "dv_total_median": 1.0555785787099814,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.26005388271323093,
+        "dv_per_rev_mean_ms": 0.27624052977993835,
+        "dv_per_rev_iqr_ms": [
+          0.19009706510053653,
+          0.33973171811993386
+        ],
+        "dv_per_rev_std_ms": 0.12281452322213823,
+        "dv_total_median": 0.007615047810050686,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.007,
+      "period": 2.703269613242986,
+      "rho_unstable": 2598.9607948808357,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 36.226793061121306,
+        "dv_per_rev_mean_ms": 36.09052606140507,
+        "dv_per_rev_iqr_ms": [
+          32.22019768276979,
+          39.63574644052441
+        ],
+        "dv_per_rev_std_ms": 9.799808249363538,
+        "dv_total_median": 1.0608138524486475,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.2601166776467539,
+        "dv_per_rev_mean_ms": 0.2757668894908101,
+        "dv_per_rev_iqr_ms": [
+          0.18879554119900221,
+          0.3392329126469121
+        ],
+        "dv_per_rev_std_ms": 0.1228995289799399,
+        "dv_total_median": 0.007616886607518416,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.009,
+      "period": 2.711835309024796,
+      "rho_unstable": 2544.889533026278,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 36.48700725649046,
+        "dv_per_rev_mean_ms": 36.26777873908775,
+        "dv_per_rev_iqr_ms": [
+          32.05152521061709,
+          39.98007209759097
+        ],
+        "dv_per_rev_std_ms": 9.815865096132635,
+        "dv_total_median": 1.0684335946263679,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.26077094249277916,
+        "dv_per_rev_mean_ms": 0.2751355148473668,
+        "dv_per_rev_iqr_ms": [
+          0.18751807930652717,
+          0.3326955272674502
+        ],
+        "dv_per_rev_std_ms": 0.12293091184538966,
+        "dv_total_median": 0.007636045168163373,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    },
+    {
+      "amplitude": 0.011,
+      "period": 2.7233871842887236,
+      "rho_unstable": 2474.467626397889,
+      "sac": {
+        "algo": "SAC(zero-shot)",
+        "deterministic": true,
+        "n_episodes": 400,
+        "dv_per_rev_median_ms": 36.837767966618976,
+        "dv_per_rev_mean_ms": 36.48677440446542,
+        "dv_per_rev_iqr_ms": [
+          31.89441933564599,
+          40.284547748615935
+        ],
+        "dv_per_rev_std_ms": 9.816827805223362,
+        "dv_total_median": 1.078704772082547,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9908201954163266,
+          1.0
+        ],
+        "retention_n": 400
+      },
+      "lqr": {
+        "algo": "LQR(per-orbit)",
+        "deterministic": true,
+        "n_episodes": 200,
+        "dv_per_rev_median_ms": 0.2566904029703487,
+        "dv_per_rev_mean_ms": 0.27434755287072266,
+        "dv_per_rev_iqr_ms": [
+          0.18535720272966766,
+          0.3287673198215975
+        ],
+        "dv_per_rev_std_ms": 0.12291553966011519,
+        "dv_total_median": 0.007516556455939932,
+        "retention_pooled": 1.0,
+        "retention_ci95": [
+          0.9817246596448512,
+          1.0
+        ],
+        "retention_n": 200
+      }
+    }
+  ]
+}
