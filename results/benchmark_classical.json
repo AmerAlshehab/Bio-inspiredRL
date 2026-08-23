@@ -1,0 +1,177 @@
+{
+  "chosen_rho": 3.0,
+  "n_episodes": 400,
+  "sweep": [
+    {
+      "algo": "LQR(rho=0.01)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.32860286674409195,
+      "dv_per_rev_mean_ms": 0.3407990747270003,
+      "dv_per_rev_iqr_ms": [
+        0.2355501288754841,
+        0.43544954769309047
+      ],
+      "dv_per_rev_std_ms": 0.13580988610190042,
+      "dv_total_median": 0.009622338704072971,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    },
+    {
+      "algo": "LQR(rho=0.03)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.3086972188243276,
+      "dv_per_rev_mean_ms": 0.31868493600363135,
+      "dv_per_rev_iqr_ms": [
+        0.22408674449370886,
+        0.4039954641205047
+      ],
+      "dv_per_rev_std_ms": 0.12541456720667477,
+      "dv_total_median": 0.009039450038779723,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    },
+    {
+      "algo": "LQR(rho=0.1)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.2826470386962397,
+      "dv_per_rev_mean_ms": 0.2962323754425685,
+      "dv_per_rev_iqr_ms": [
+        0.21032703990815474,
+        0.37561333757371945
+      ],
+      "dv_per_rev_std_ms": 0.11695062104353493,
+      "dv_total_median": 0.008276633636785935,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    },
+    {
+      "algo": "LQR(rho=0.3)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.2659097784721732,
+      "dv_per_rev_mean_ms": 0.2783559602696495,
+      "dv_per_rev_iqr_ms": [
+        0.19528742842179522,
+        0.34919716861254607
+      ],
+      "dv_per_rev_std_ms": 0.11329009328478046,
+      "dv_total_median": 0.007786523527735671,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    },
+    {
+      "algo": "LQR(rho=1)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.2528183125084591,
+      "dv_per_rev_mean_ms": 0.2695792197983747,
+      "dv_per_rev_iqr_ms": [
+        0.18586443187510568,
+        0.33509520066367093
+      ],
+      "dv_per_rev_std_ms": 0.11698659866199844,
+      "dv_total_median": 0.007403171669354586,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    },
+    {
+      "algo": "LQR(rho=3)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.2516572452622703,
+      "dv_per_rev_mean_ms": 0.2718817973058421,
+      "dv_per_rev_iqr_ms": [
+        0.1806943615089642,
+        0.3398676510974171
+      ],
+      "dv_per_rev_std_ms": 0.1237925056081531,
+      "dv_total_median": 0.0073691726284705805,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    },
+    {
+      "algo": "LQR(rho=10)",
+      "deterministic": true,
+      "n_episodes": 400,
+      "dv_per_rev_median_ms": 0.2549826552878499,
+      "dv_per_rev_mean_ms": 0.2803457755124118,
+      "dv_per_rev_iqr_ms": [
+        0.1825167092093503,
+        0.34951971517443414
+      ],
+      "dv_per_rev_std_ms": 0.13090160491384878,
+      "dv_total_median": 0.007466549203158125,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    }
+  ],
+  "rk4": {
+    "algo": "LQR(rho=3) RK4",
+    "deterministic": true,
+    "n_episodes": 400,
+    "dv_per_rev_median_ms": 0.2516572452622703,
+    "dv_per_rev_mean_ms": 0.2718817973058421,
+    "dv_per_rev_iqr_ms": [
+      0.1806943615089642,
+      0.3398676510974171
+    ],
+    "dv_per_rev_std_ms": 0.1237925056081531,
+    "dv_total_median": 0.0073691726284705805,
+    "retention_pooled": 1.0,
+    "retention_ci95": [
+      0.9908201954163266,
+      1.0
+    ],
+    "retention_n": 400
+  },
+  "truth": {
+    "algo": "LQR(rho=3) DOP853",
+    "deterministic": true,
+    "n_episodes": 400,
+    "dv_per_rev_median_ms": 0.2516572584720536,
+    "dv_per_rev_mean_ms": 0.2718818055079855,
+    "dv_per_rev_iqr_ms": [
+      0.18069436329287433,
+      0.3398676555472008
+    ],
+    "dv_per_rev_std_ms": 0.12379250653215941,
+    "dv_total_median": 0.007369173015287075,
+    "retention_pooled": 1.0,
+    "retention_ci95": [
+      0.9908201954163266,
+      1.0
+    ],
+    "retention_n": 400
+  }
+}

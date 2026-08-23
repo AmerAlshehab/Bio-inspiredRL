@@ -1,0 +1,133 @@
+{
+  "n_episodes": 50,
+  "integrator": "DOP853",
+  "runs": [
+    {
+      "algo": "sac_dop853",
+      "seed": 0,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.05379173107806804,
+      "dv_per_rev_median": 0.05378051722681862,
+      "dv_per_rev_std": 0.00018051544704467804,
+      "dv_total": 1.6137519323420415,
+      "ep_reward": 85.5749104260579
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 1,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.032934017779933523,
+      "dv_per_rev_median": 0.03292669799288597,
+      "dv_per_rev_std": 0.00018193210138492137,
+      "dv_total": 0.9880205333980058,
+      "ep_reward": 101.23909960932004
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 2,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.03293699019683187,
+      "dv_per_rev_median": 0.03291922395008913,
+      "dv_per_rev_std": 0.00015226003971017691,
+      "dv_total": 0.9881097059049562,
+      "ep_reward": 102.4331912898211
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 3,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.03755989402797357,
+      "dv_per_rev_median": 0.037519020167945165,
+      "dv_per_rev_std": 0.0002944120040191559,
+      "dv_total": 1.1267968208392072,
+      "ep_reward": 93.01725090709762
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 4,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.028673482140494984,
+      "dv_per_rev_median": 0.02865686639838154,
+      "dv_per_rev_std": 0.00016645098322718398,
+      "dv_total": 0.8602044642148492,
+      "ep_reward": 98.66927160233874
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 5,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.03956012039458944,
+      "dv_per_rev_median": 0.03952808599122364,
+      "dv_per_rev_std": 0.0001331398050967453,
+      "dv_total": 1.1868036118376835,
+      "ep_reward": 99.05593503147435
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 6,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.017884207227440087,
+      "dv_per_rev_median": 0.01786491568999369,
+      "dv_per_rev_std": 0.0001750517709052766,
+      "dv_total": 0.5365262168232028,
+      "ep_reward": 106.65235313031961
+    },
+    {
+      "algo": "sac_dop853",
+      "seed": 7,
+      "retention": 1.0,
+      "n_episodes": 50,
+      "n_survived": 50,
+      "dv_per_rev": 0.03736750295547817,
+      "dv_per_rev_median": 0.03734390904039249,
+      "dv_per_rev_std": 0.00021136813833714203,
+      "dv_total": 1.1210250886643451,
+      "ep_reward": 99.97888974107424
+    }
+  ],
+  "summary": {
+    "sac_dop853": {
+      "n_seeds": 8,
+      "dv_per_rev_mean": 0.03508849322510121,
+      "dv_per_rev_median": 0.035152246576155025,
+      "dv_per_rev_std": 0.009536238885408188,
+      "dv_per_rev_iqr": [
+        0.03186888387007389,
+        0.03805995061962754
+      ],
+      "dv_per_rev_seeds": [
+        0.05379173107806804,
+        0.032934017779933523,
+        0.03293699019683187,
+        0.03755989402797357,
+        0.028673482140494984,
+        0.03956012039458944,
+        0.017884207227440087,
+        0.03736750295547817
+      ],
+      "dv_per_rev_median_ms": 36.013476617270825,
+      "dv_per_rev_mean_ms": 35.94816130911619,
+      "dv_total_median": 1.0545673972846505,
+      "retention_pooled": 1.0,
+      "retention_ci95": [
+        0.9908201954163266,
+        1.0
+      ],
+      "retention_n": 400
+    }
+  }
+}
