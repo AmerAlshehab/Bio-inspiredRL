@@ -1,7 +1,7 @@
 # Station-keeping RL on an unstable CR3BP orbit
 
 Reinforcement learning for impulsive station-keeping on an unstable planar
-Lyapunov orbit in the Circular Restricted Three-Body Problem (Earth–Moon, near
+Lyapunov orbit in the Circular Restricted Three-Body Problem (Earth-Moon, near
 L1). An agent learns to hold the spacecraft inside a tube around the periodic
 reference using minimal delta-v, on a reference whose unstable Floquet
 multiplier is ~2600 per revolution.

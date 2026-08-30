@@ -34,7 +34,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def aggregate(runs):
     """Group per-run metrics by algo across seeds. Reports median + IQR (robust to
     the fat-tailed seed variance mean+std hides) alongside the per-seed scatter, and
-    a pooled Clopper-Pearson retention CI (mean±std of a std>mean distribution is
+    a pooled Clopper-Pearson retention CI (mean+/-std of a std>mean distribution is
     meaningless, and 20/20 episodes cannot support a '100% retention' claim)."""
     out = {}
     for algo in sorted({r["algo"] for r in runs}):
