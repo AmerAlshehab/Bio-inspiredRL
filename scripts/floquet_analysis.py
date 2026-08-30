@@ -156,9 +156,11 @@ def make_figure(sac_res, lqr_res, per_step_growth, path):
     except ImportError:
         print("matplotlib not available -- skipping figure")
         return
+    from scripts._figstyle import apply_bold_style
+    apply_bold_style()
     au_pre, au_post, _, _, cos = sac_res
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
-    fig.suptitle("SAC rediscovers Floquet-mode station-keeping", fontsize=11)
+    fig.suptitle("SAC rediscovers Floquet-mode station-keeping")
     lim = np.percentile(np.abs(au_pre), 99)
     ax1.plot([-lim, lim], [-lim, lim], color="grey", ls=":", lw=1, label="no kick (coast only)")
     hold = 1.0 / per_step_growth  # alpha_u+ = alpha_u-/growth exactly holds the mode
@@ -168,14 +170,14 @@ def make_figure(sac_res, lqr_res, per_step_growth, path):
     ax1.set_xlim(-lim, lim); ax1.set_ylim(-lim, lim)
     ax1.set_xlabel(r"unstable component before kick  $\alpha_u^-$")
     ax1.set_ylabel(r"after kick  $\alpha_u^+$")
-    ax1.legend(fontsize=8); ax1.set_title("Unstable-component cancellation")
+    ax1.legend(); ax1.set_title("Unstable-component cancellation")
 
     c = cos[np.isfinite(cos)]
     ax2.hist(c, bins=40, range=(-1, 1), color="C0", alpha=0.85)
     ax2.axvline(np.median(c), color="C3", lw=1.5,
                 label=f"median {np.median(c):+.2f}")
     ax2.set_xlabel("cos(SAC impulse, min-norm Floquet impulse)")
-    ax2.set_ylabel("control steps"); ax2.legend(fontsize=8)
+    ax2.set_ylabel("control steps"); ax2.legend()
     ax2.set_title("Impulse direction alignment")
     fig.tight_layout(); fig.savefig(path, dpi=140)
     print(f"wrote {path}")
@@ -248,7 +250,6 @@ def main():
                 f"the mode; SAC does so with no model, stirring the stable mode more.\n")
     make_figure(sac_res, lqr_res, g1, os.path.join(ROOT, "results", "floquet_projection.png"))
     print("\nwrote results/floquet_analysis.{json,md} + results/floquet_projection.png")
-    print("FLOQUET DONE")
 
 
 def _demo(ref, cfg, phases, D_u, D_s, info):

@@ -114,21 +114,22 @@ def make_figure(res, path):
         print("matplotlib not available -- skipping figure")
         return
     km = [r["sigma_km"] for r in res["rows"]]
+    from scripts._figstyle import apply_bold_style
+    apply_bold_style()
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
-    fig.suptitle("Zero-shot robustness to navigation noise (policy trained noise-free)",
-                 fontsize=11)
+    fig.suptitle("Zero-shot robustness to navigation noise (policy trained noise-free)")
     ax1.plot(km, [r["sac"]["dv_per_rev_median_ms"] for r in res["rows"]], "o-",
              color="C0", label="SAC (zero-shot)")
     ax1.plot(km, [r["lqr"]["dv_per_rev_median_ms"] for r in res["rows"]], "s--",
              color="C1", label="LQR (unfiltered)")
     ax1.set_xlabel("nav position 1-sigma (km)"); ax1.set_ylabel("dV per rev (m/s)")
-    ax1.set_yscale("log"); ax1.legend(fontsize=8); ax1.set_title("Fuel cost")
+    ax1.set_yscale("log"); ax1.legend(); ax1.set_title("Fuel cost")
     ax2.plot(km, [r["sac"]["retention_pooled"] for r in res["rows"]], "o-",
              color="C0", label="SAC")
     ax2.plot(km, [r["lqr"]["retention_pooled"] for r in res["rows"]], "s--",
              color="C1", label="LQR")
     ax2.set_xlabel("nav position 1-sigma (km)"); ax2.set_ylabel("tube retention")
-    ax2.set_ylim(-0.05, 1.05); ax2.legend(fontsize=8); ax2.set_title("Survival")
+    ax2.set_ylim(-0.05, 1.05); ax2.legend(); ax2.set_title("Survival")
     fig.tight_layout(); fig.savefig(path, dpi=140)
     print(f"wrote {path}")
 
@@ -140,10 +141,16 @@ def main():
     p.add_argument("--n-lqr", type=int, default=200)
     p.add_argument("--n-seeds", type=int, default=4)
     p.add_argument("--demo", action="store_true")
+    p.add_argument("--replot", action="store_true",
+                   help="redraw the figure from the cached JSON, without re-running the sweep")
     args = p.parse_args()
 
     if args.demo:
         _demo()
+        return
+    if args.replot:
+        with open(os.path.join(ROOT, "results", "benchmark_noise.json")) as f:
+            make_figure(json.load(f), os.path.join(ROOT, "results", "noise_robustness.png"))
         return
 
     res = sweep(args.sigmas, args.n_sac, args.n_lqr, args.n_seeds)
@@ -153,7 +160,6 @@ def main():
         f.write(write_markdown(res))
     make_figure(res, os.path.join(ROOT, "results", "noise_robustness.png"))
     print("\nwrote results/benchmark_noise.{json,md} + results/noise_robustness.png")
-    print("NOISE STUDY DONE")
 
 
 def _demo():
