@@ -47,22 +47,81 @@ B_V = np.zeros((6, 3))
 B_V[3:, :] = np.eye(3)
 
 
-def gain_schedule(reference, cfg, rho):
-    """One discrete-LQR gain per phase grid point. Q mirrors the reward's
-    position/velocity weights; R = rho * w_dv penalises control (rho trades fuel
-    against tracking). Returns (phases, K_stack) with K_stack shape (N, 3, 6)."""
+def _ab_stack(reference, cfg):
+    """Discrete error dynamics per phase, shared by both schedules. At phase phi_k
+    the impulse-then-coast map is A_k = Phi(phi_k) (the STM over one control
+    interval) and B_k = Phi(phi_k)[:, 3:6] (the velocity columns). Returns
+    (phases, A, B) with A shape (N, 6, 6) and B shape (N, 6, 3)."""
     dt = reference.period / cfg.points_per_rev
+    phases = np.arange(cfg.points_per_rev) / cfg.points_per_rev
+    A = np.empty((cfg.points_per_rev, 6, 6))
+    B = np.empty((cfg.points_per_rev, 6, 3))
+    for i, phi in enumerate(phases):
+        phi_stm = propagate_stm(reference.at_phase(phi), (0.0, dt), cfg.mu).y[6:, -1].reshape(6, 6)
+        A[i], B[i] = phi_stm, phi_stm @ B_V
+    return phases, A, B
+
+
+def _qr(cfg, rho):
+    """Q mirrors the reward's position/velocity weights; R = rho * w_dv penalises
+    control (rho trades fuel against tracking)."""
     Q = np.diag([cfg.w_pos] * 3 + [cfg.w_vel] * 3)
     R = rho * cfg.w_dv * np.eye(3)
-    phases = np.arange(cfg.points_per_rev) / cfg.points_per_rev
+    return Q, R
+
+
+def gain_schedule(reference, cfg, rho):
+    """Frozen-phase discrete LQR: at each phase solve the steady-state DARE as if
+    that phase's one-step map repeated forever. A gain-scheduling approximation --
+    cheap, but it ignores that the error passes through a *different* linearisation
+    at the next step. Returns (phases, K_stack) with K_stack shape (N, 3, 6)."""
+    Q, R = _qr(cfg, rho)
+    phases, A, B = _ab_stack(reference, cfg)
     gains = np.empty((cfg.points_per_rev, 3, 6))
-    for i, phi in enumerate(phases):
-        x_ref = reference.at_phase(phi)
-        sol = propagate_stm(x_ref, (0.0, dt), cfg.mu)
-        phi_stm = sol.y[6:, -1].reshape(6, 6)
-        A_d, B_d = phi_stm, phi_stm @ B_V
-        K, _, _ = dlqr(A_d, B_d, Q, R)
+    for i in range(cfg.points_per_rev):
+        K, _, _ = dlqr(A[i], B[i], Q, R)
         gains[i] = K
+    return phases, gains
+
+
+def gain_schedule_periodic(reference, cfg, rho, *, tol=1.0e-10, max_sweeps=1000):
+    """LTV (periodic) discrete LQR -- the honest best-shot linear baseline.
+
+    Rather than pretending each phase's map repeats forever, iterate the periodic
+    discrete Riccati recursion around the whole orbit until the per-phase cost-to-go
+    P_k reaches its periodic fixed point (P_k = P_{k+N}). Each gain then accounts
+    for the actual sequence of linearisations the error passes through over a
+    revolution. This is exactly where it diverges from the frozen-phase schedule as
+    the amplitude grows and A(phi) varies more strongly around the orbit.
+
+    Backward DP with cost sum_k (e_k^T Q e_k + u_k^T R u_k) over e_{k+1} = A_k e_k +
+    B_k u_k gives, for cost-to-go P_{k+1} entering the next phase,
+        K_k = (R + B_k^T P_{k+1} B_k)^{-1} B_k^T P_{k+1} A_k
+        P_k = Q + A_k^T P_{k+1} A_k - A_k^T P_{k+1} B_k K_k .
+    """
+    Q, R = _qr(cfg, rho)
+    phases, A, B = _ab_stack(reference, cfg)
+    n = cfg.points_per_rev
+    P = np.stack([Q] * n)                       # cost-to-go per phase, seeded at Q
+    for _ in range(max_sweeps):
+        delta = 0.0
+        for k in range(n - 1, -1, -1):
+            Pn = P[(k + 1) % n]                 # P_{k+1}, periodic wrap
+            BtP = B[k].T @ Pn
+            K = np.linalg.solve(R + BtP @ B[k], BtP @ A[k])
+            P_new = Q + A[k].T @ Pn @ A[k] - A[k].T @ Pn @ B[k] @ K
+            P_new = 0.5 * (P_new + P_new.T)     # symmetrise against drift
+            delta = max(delta, float(np.max(np.abs(P_new - P[k]))))
+            P[k] = P_new
+        if delta < tol:
+            break
+    else:
+        raise RuntimeError("periodic Riccati recursion did not converge")
+    gains = np.empty((n, 3, 6))
+    for k in range(n):
+        Pn = P[(k + 1) % n]
+        BtP = B[k].T @ Pn
+        gains[k] = np.linalg.solve(R + BtP @ B[k], BtP @ A[k])
     return phases, gains
 
 
@@ -139,9 +198,12 @@ def main():
     p.add_argument("--rhos", nargs="+", type=float,
                    default=[0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0])
     p.add_argument("--n-episodes", type=int, default=400)
+    p.add_argument("--schedule", choices=["frozen", "periodic"], default="periodic",
+                   help="LQR gain schedule: 'periodic' is the LTV best-shot baseline")
     p.add_argument("--demo", action="store_true")
     args = p.parse_args()
 
+    schedule = gain_schedule_periodic if args.schedule == "periodic" else gain_schedule
     cfg = StationKeepingConfig()
     reference = ReferenceOrbit(cfg)
 
@@ -153,9 +215,9 @@ def main():
     # Tune rho: pick the cheapest gain that still holds every episode in the tube.
     sweep = []
     for rho in args.rhos:
-        _, gains = gain_schedule(reference, cfg, rho)
+        _, gains = schedule(reference, cfg, rho)
         dv, tot, surv = eval_policy(LQRPolicy(gains, cfg), rk4_env, args.n_episodes)
-        s = summarise(dv, tot, surv, f"LQR(rho={rho:g})")
+        s = summarise(dv, tot, surv, f"LQR-{args.schedule}(rho={rho:g})")
         sweep.append((rho, gains, s))
         print(row(s), flush=True)
 
@@ -165,10 +227,10 @@ def main():
 
     # Report the winner on RK4 (parity with the RL benchmark) and on DOP853 truth.
     dv, tot, surv = eval_policy(LQRPolicy(gains, cfg), rk4_env, args.n_episodes)
-    rk4 = summarise(dv, tot, surv, f"LQR(rho={rho:g}) RK4")
+    rk4 = summarise(dv, tot, surv, f"LQR-{args.schedule}(rho={rho:g}) RK4")
     truth_env = StationKeepingEnv(cfg, reference=reference, truth=True)
     dv, tot, surv = eval_policy(LQRPolicy(gains, cfg), truth_env, args.n_episodes)
-    truth = summarise(dv, tot, surv, f"LQR(rho={rho:g}) DOP853")
+    truth = summarise(dv, tot, surv, f"LQR-{args.schedule}(rho={rho:g}) DOP853")
 
     with open(os.path.join(ROOT, "results", "benchmark_classical.json"), "w") as f:
         json.dump({"chosen_rho": rho, "n_episodes": args.n_episodes,
@@ -183,28 +245,41 @@ def main():
         f.write("|---|---|---|---|---|\n")
         f.write(row(rk4) + "\n" + row(truth) + "\n")
     print("\nwrote results/benchmark_classical.{json,md}")
-    print("LQR_BASELINE DONE")
 
 
 def _demo(reference, cfg):
-    """Self-check: each scheduled gain must stabilise its local linear model, i.e.
-    the closed-loop A_d - B_d K has spectral radius < 1 despite the open-loop
-    unstable Floquet mode (per-step growth ~ rho_u^(1/points_per_rev))."""
-    dt = reference.period / cfg.points_per_rev
-    _, gains = gain_schedule(reference, cfg, rho=0.1)
-    worst_open, worst_closed = 0.0, 0.0
-    for i in range(cfg.points_per_rev):
-        x_ref = reference.at_phase(i / cfg.points_per_rev)
-        phi_stm = propagate_stm(x_ref, (0.0, dt), cfg.mu).y[6:, -1].reshape(6, 6)
-        A_d, B_d = phi_stm, phi_stm @ B_V
-        worst_open = max(worst_open, max(abs(np.linalg.eigvals(A_d))))
-        cl = A_d - B_d @ gains[i]
-        worst_closed = max(worst_closed, max(abs(np.linalg.eigvals(cl))))
-    print(f"open-loop worst |eig| = {worst_open:.3f} (unstable, > 1)")
-    print(f"closed-loop worst |eig| = {worst_closed:.3f} (must be < 1)")
-    assert worst_open > 1.0, "open loop should be unstable"
-    assert worst_closed < 1.0, "LQR must stabilise every phase"
-    print("demo ok: gain schedule stabilises the unstable orbit at every phase")
+    """Self-check on both schedules.
+
+    Frozen-phase: each gain must stabilise its own local one-step map (closed-loop
+    A_d - B_d K spectral radius < 1). Periodic (LTV): the honest test is the whole
+    closed-loop *monodromy* -- the ordered product of (A_k - B_k K_k) around one
+    revolution -- which must have spectral radius < 1 even though the open-loop
+    monodromy (product of the A_k) carries the unstable Floquet mode (|eig| > 1)."""
+    phases, A, B = _ab_stack(reference, cfg)
+    n = cfg.points_per_rev
+
+    _, frozen = gain_schedule(reference, cfg, rho=0.1)
+    worst_open_local = max(max(abs(np.linalg.eigvals(A[i]))) for i in range(n))
+    worst_closed_local = max(
+        max(abs(np.linalg.eigvals(A[i] - B[i] @ frozen[i]))) for i in range(n))
+    print(f"frozen: open-loop worst local |eig| = {worst_open_local:.3f} (> 1)")
+    print(f"frozen: closed-loop worst local |eig| = {worst_closed_local:.3f} (< 1)")
+    assert worst_open_local > 1.0, "open loop should be unstable"
+    assert worst_closed_local < 1.0, "frozen LQR must stabilise every phase"
+
+    _, periodic = gain_schedule_periodic(reference, cfg, rho=0.1)
+    M_open = np.eye(6)
+    M_closed = np.eye(6)
+    for k in range(n):                           # ordered product around one rev
+        M_open = A[k] @ M_open
+        M_closed = (A[k] - B[k] @ periodic[k]) @ M_closed
+    rho_open = max(abs(np.linalg.eigvals(M_open)))
+    rho_closed = max(abs(np.linalg.eigvals(M_closed)))
+    print(f"periodic: open-loop monodromy |eig|max = {rho_open:.3f} (unstable, > 1)")
+    print(f"periodic: closed-loop monodromy |eig|max = {rho_closed:.3f} (must be < 1)")
+    assert rho_open > 1.0, "open-loop monodromy should carry the unstable mode"
+    assert rho_closed < 1.0, "periodic LQR must stabilise the closed-loop monodromy"
+    print("demo ok: both schedules stabilise the unstable orbit")
 
 
 if __name__ == "__main__":
