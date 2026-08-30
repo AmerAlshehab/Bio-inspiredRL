@@ -7,6 +7,11 @@ periodic reference orbit. The reference is closed once with the differential
 corrector (cr3bp.periodic) and DOP853; the episode itself integrates with
 fixed-step RK4 for speed. Leaving the tube ends the episode with a penalty.
 
+Three independent noise channels, all off by default: injection dispersion
+(init_*_sigma, once at reset), navigation noise (nav_*_sigma, on the observation
+only -- a POMDP), and process noise (proc_*_sigma, a per-step disturbance to the
+TRUE state modelling unmodelled accelerations / execution error).
+
     observation : [ dr/scale (3), dv/scale (3), sin(2*pi*phase), cos(2*pi*phase) ]
     action      : dv in [-1, 1]^3, scaled to max_dv (impulsive, synodic frame)
     reward      : alive_bonus - ( w_dv |dv| + w_pos |dr| + w_vel |dv_err| ),
@@ -65,6 +70,8 @@ class StationKeepingConfig:
     init_vel_sigma: float = 1.0e-3    # injection dispersion (velocity)
     nav_pos_sigma: float = 0.0        # per-step navigation noise on the observation
     nav_vel_sigma: float = 0.0
+    proc_pos_sigma: float = 0.0       # per-step process noise on the TRUE state (position)
+    proc_vel_sigma: float = 0.0       # per-step process noise on the TRUE state (velocity)
 
     n_ref_samples: int = 2000         # reference-orbit lookup-table resolution
 
@@ -162,6 +169,12 @@ class StationKeepingEnv(gym.Env):
             self.state = rk4_step(
                 self.state, self.dt_control, self.cfg.mu, self.cfg.substeps_per_control
             )
+        # Process noise: unmodelled accelerations / execution error kick the TRUE
+        # state each control interval (not the observation). This is what pushes
+        # the excursions out of the linear neighbourhood of the reference.
+        if self.cfg.proc_pos_sigma or self.cfg.proc_vel_sigma:
+            self.state[:3] += self.np_random.normal(0.0, self.cfg.proc_pos_sigma, 3)
+            self.state[3:] += self.np_random.normal(0.0, self.cfg.proc_vel_sigma, 3)
         self.phase = (self.phase + self.dt_control / self.ref.period) % 1.0
         self.t_step += 1
 
@@ -225,6 +238,33 @@ def _demo():
     _, _, term2, _, info2 = env2.step(np.zeros(3))
     assert not term2 and info2["pos_err"] < cfg.tube_radius
     print(f"  ok: on-reference step stays in tube (pos_err={info2['pos_err']:.2e})")
+
+    # Process noise: proc=0 must be byte-for-byte identical to the clean env under
+    # the same seed; a large proc_vel_sigma must drive a zero-action policy out of
+    # the tube faster than noise-free (the disturbance is what enters the nonlinear
+    # regime later).
+    def _exit_step(pcfg):
+        e = StationKeepingEnv(pcfg)
+        e.reset(seed=7)
+        e.state = e.ref.at_phase(e.phase).copy()      # start clean on the orbit
+        for k in range(1, e.max_steps + 1):
+            _, _, term, trunc, _ = e.step(np.zeros(3))
+            if term or trunc:
+                return k, term
+        return e.max_steps, term
+
+    import dataclasses as _dc
+    clean_env = StationKeepingEnv(cfg); o_a, _ = clean_env.reset(seed=3)
+    o_b, _ = StationKeepingEnv(_dc.replace(cfg, proc_vel_sigma=0.0)).reset(seed=3)
+    _, ra, *_ = clean_env.step(np.zeros(3))
+    zero_env = StationKeepingEnv(_dc.replace(cfg, proc_vel_sigma=0.0)); zero_env.reset(seed=3)
+    _, rb, *_ = zero_env.step(np.zeros(3))
+    assert np.allclose(o_a, o_b) and ra == rb, "proc=0 must not change any behaviour"
+    k_clean, _ = _exit_step(cfg)
+    k_noisy, _ = _exit_step(_dc.replace(cfg, proc_vel_sigma=5e-3))
+    assert k_noisy < k_clean, "large process noise must leave the tube sooner"
+    print(f"  ok: proc=0 unchanged; large proc noise exits at step {k_noisy} "
+          f"< noise-free {k_clean}")
 
     print("all env checks passed")
 
